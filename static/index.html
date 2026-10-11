@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SysAgent 控制台</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <div class="brand">Sys<span>Agent</span></div>
+    <nav class="nav">
+      <button data-view="overview" class="active">📡 概览</button>
+      <button data-view="chat">💬 对话<span class="badge" id="badge-approval" hidden>0</span></button>
+      <button data-view="logs">📜 日志</button>
+      <button data-view="alerts">🚨 告警<span class="badge" id="badge-alert" hidden>0</span></button>
+      <button data-view="memory">🧠 记忆<span class="badge" id="badge-cap" hidden>0</span></button>
+      <button data-view="settings">⚙️ 设置</button>
+    </nav>
+    <div class="sidebar-foot">
+      <div><span id="conn-dot"></span><span id="conn-text">连接中…</span></div>
+      <div id="foot-host">—</div>
+      <div id="foot-llm">—</div>
+    </div>
+  </aside>
+
+  <div id="main">
+    <header id="topbar">
+      <span id="view-title">概览</span>
+      <span class="pill">运行时长 <b id="tb-uptime">—</b></span>
+      <span class="pill">CPU <b id="tb-cpu">—</b></span>
+      <span class="pill">内存 <b id="tb-mem">—</b></span>
+      <span class="spacer"></span>
+      <span class="pill" id="tb-alerts-last">暂无告警</span>
+    </header>
+
+    <div id="content">
+      <!-- 概览 -->
+      <section class="view active" id="view-overview">
+        <div class="grid kpis">
+          <div class="panel kpi">
+            <div class="label">CPU 使用率</div>
+            <div class="value" id="kpi-cpu">—<small>%</small></div>
+            <div class="bar"><i id="bar-cpu" style="width:0"></i></div>
+            <div class="sub" id="kpi-cpu-sub">逻辑核 —</div>
+          </div>
+          <div class="panel kpi">
+            <div class="label">内存使用率</div>
+            <div class="value" id="kpi-mem">—<small>%</small></div>
+            <div class="bar"><i id="bar-mem" style="width:0"></i></div>
+            <div class="sub" id="kpi-mem-sub">—</div>
+          </div>
+          <div class="panel kpi">
+            <div class="label">磁盘（最满分区）</div>
+            <div class="value" id="kpi-disk">—<small>%</small></div>
+            <div class="bar"><i id="bar-disk" style="width:0"></i></div>
+            <div class="sub" id="kpi-disk-sub">—</div>
+          </div>
+          <div class="panel kpi">
+            <div class="label">网络速率</div>
+            <div class="value" id="kpi-net">—</div>
+            <div class="sub" id="kpi-net-sub">↓ 接收 / ↑ 发送</div>
+          </div>
+        </div>
+
+        <div class="grid charts">
+          <div class="panel chart-box"><h3>CPU %</h3><canvas id="chart-cpu"></canvas></div>
+          <div class="panel chart-box"><h3>内存 %</h3><canvas id="chart-mem"></canvas></div>
+          <div class="panel chart-box"><h3>网络 KiB/s</h3><canvas id="chart-net"></canvas></div>
+        </div>
+
+        <div class="grid split">
+          <div class="panel">
+            <h3>Top 进程</h3>
+            <table>
+              <thead><tr><th>PID</th><th>名称</th><th style="text-align:right">CPU%</th><th style="text-align:right">内存%</th></tr></thead>
+              <tbody id="proc-body"><tr><td colspan="4" class="empty">加载中…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="panel">
+            <h3>被监听项目</h3>
+            <div id="proj-list"><div class="empty">加载中…</div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 对话 -->
+      <section class="view flexcol" id="view-chat">
+        <div id="chat-scroll">
+          <div id="chat-list">
+            <div class="msg assistant">
+              <div class="who">SysAgent</div>
+              <div class="bubble">你好，我是 SysAgent。我可以看到这台机器的运行状态、监听项目日志，并按你的指令分析问题、执行白名单内的操作。试试问我：「现在系统状态怎么样？」或「检查 demo 项目最近有没有报错」。</div>
+            </div>
+          </div>
+        </div>
+        <div id="chat-input-bar">
+          <form id="chat-form">
+            <textarea id="chat-input" rows="1" placeholder="输入指令，Enter 发送，Shift+Enter 换行"></textarea>
+            <button class="btn primary" type="submit" id="chat-send">发送</button>
+          </form>
+          <div id="chat-hint">工具调用可点击展开查看结果；变更操作需审批。解决故障后它会沉淀经验，缺能力时会提案「加武器」（进「记忆」页审批）。</div>
+        </div>
+      </section>
+
+      <!-- 日志 -->
+      <section class="view flexcol" id="view-logs">
+        <div class="log-toolbar">
+          <span id="log-projects"></span>
+          <span class="spacer"></span>
+          <input id="log-search" placeholder="过滤关键字…">
+          <button class="chip active" id="log-pause">⏸ 暂停滚动</button>
+          <button class="chip" id="log-clear">清空</button>
+        </div>
+        <div id="log-box"><div class="empty">暂无日志</div></div>
+      </section>
+
+      <!-- 告警 -->
+      <section class="view" id="view-alerts">
+        <div style="max-width:1000px">
+          <div id="alert-list"><div class="empty">暂无告警 — 一切正常 🎉</div></div>
+        </div>
+      </section>
+
+      <!-- 记忆 / 能力 -->
+      <section class="view" id="view-memory">
+        <div class="grid kpis" style="grid-template-columns:repeat(4,1fr);max-width:1100px">
+          <div class="panel kpi"><div class="label">业务事实</div><div class="value" id="mem-fact">0</div></div>
+          <div class="panel kpi"><div class="label">故障经验</div><div class="value" id="mem-lesson">0</div></div>
+          <div class="panel kpi"><div class="label">运维剧本</div><div class="value" id="mem-playbook">0</div></div>
+          <div class="panel kpi"><div class="label">已进化能力</div><div class="value" id="mem-evolved">0</div></div>
+        </div>
+        <div style="max-width:1100px">
+          <div class="log-toolbar">
+            <button class="chip active" data-mk="">全部</button>
+            <button class="chip" data-mk="fact">事实</button>
+            <button class="chip" data-mk="lesson">经验</button>
+            <button class="chip" data-mk="playbook">剧本</button>
+            <span class="spacer"></span>
+            <input id="mem-search" placeholder="搜索记忆…">
+            <button class="chip" id="mem-refresh">刷新</button>
+          </div>
+          <div id="mem-list"><div class="empty">加载中…</div></div>
+
+          <div class="panel" style="margin-top:14px">
+            <h3>能力库 · 待审批提案</h3>
+            <div id="cap-pending"><div class="empty">暂无待审批提案</div></div>
+            <h3 style="margin-top:14px">能力库 · 已生效</h3>
+            <div id="cap-applied"><div class="empty">暂无进化能力</div></div>
+            <div class="note">智能体可通过提案给自己「加武器」：新白名单命令 / 新日志监听项目 / 运维剧本。
+            命令与监听项目必须经你批准后生效（写入 <code>data/config.runtime.yaml</code>），剧本直接存入记忆。</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 设置 -->
+      <section class="view" id="view-settings">
+        <div class="grid settings-grid">
+          <div class="panel" style="grid-column:1 / -1">
+            <h3>模型管理 · 可添加云端模型并切换默认</h3>
+            <div id="llm-list" class="llm-list"></div>
+            <div class="llm-form">
+              <div class="llm-row">
+                <input id="llm-name" placeholder="显示名（如 DeepSeek）">
+                <input id="llm-base" placeholder="API Base URL（…/v1）">
+                <input id="llm-key" placeholder="API Key（仅存本机 data/models.json）" type="password">
+                <input id="llm-model" placeholder="模型 ID（如 deepseek-chat）">
+                <button class="btn primary" id="llm-add">➕ 添加云端模型</button>
+              </div>
+              <div class="llm-row">
+                <button class="chip" id="llm-test-form">🔌 测试上面填写的配置</button>
+                <span class="note" style="margin:0">兼容 OpenAI / DeepSeek / 通义 / MiMo 等一切 OpenAI 兼容接口；本地 Ollama 也可一键切换。</span>
+              </div>
+              <div id="llm-msg" class="note"></div>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>白名单命令</h3>
+            <div class="kv" id="set-white">加载中…</div>
+            <div class="note">智能体只能执行此处列出的命令；<code>needs_approval: true</code> 的命令执行前需在对话中点「批准」。</div>
+          </div>
+          <div class="panel">
+            <h3>监控项目</h3>
+            <div class="kv" id="set-projects">加载中…</div>
+            <div class="note">日志按 <code>error_patterns</code> / <code>warn_patterns</code> 正则实时匹配，命中即推送告警。</div>
+          </div>
+          <div class="panel">
+            <h3>安全模型</h3>
+            <div class="note" style="margin-top:0">
+              三级风险控制：<b style="color:var(--ok)">只读</b>查询直接执行；
+              <b style="color:var(--warn)">变更</b>类操作（启停项目 / 白名单审批命令）必须人工批准；
+              白名单外的命令与目录一律拒绝。智能体不能绕过审批执行任何变更操作。
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

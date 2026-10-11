@@ -1,0 +1,46 @@
+# E2E 测试配置：指向本地 Mock LLM（tests/mock_llm.py）
+
+llm:
+  provider: openai_compatible
+  openai_compatible:
+    base_url: "http://127.0.0.1:8799/v1"
+    api_key: "mock-key"
+    model: "mock-model"
+    temperature: 0
+    timeout: 15
+
+server:
+  host: "127.0.0.1"
+  port: 8766
+
+data_dir: "./data/e2e"
+
+agent:
+  max_tool_rounds: 15
+  history_limit: 40
+
+whitelist:
+  commands:
+    - name: "查看进程列表"
+      command: "echo PROCESS-LIST-MOCK"
+      needs_approval: false
+    - name: "重启演示应用"
+      command: "echo RESTART-MOCK-DONE"
+      needs_approval: true
+  read_dirs:
+    - "./logs"
+
+monitor:
+  poll_interval: 0.3
+  projects:
+    - name: "demo"
+      description: "演示应用"
+      log_files:
+        - "./logs/demo.log"
+      error_patterns:
+        - '\bERROR\b'
+        - 'Traceback \(most recent call last\)'
+      warn_patterns:
+        - '\bWARN(ING)?\b'
+      start_command: "python scripts/demo_app.py"
+      workdir: "."

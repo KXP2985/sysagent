@@ -1,0 +1,9 @@
+[project]
+name = "tiny-webapp"
+version = "0.1.0"
+description = "tiny sample webapp for SysAgent code learning demo"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+tiny-webapp = "main:main"

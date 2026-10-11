@@ -1,0 +1,29 @@
+# ---- 运行时数据（含 API Key / 记忆 / QQ 配置，绝不上传）----
+config.yaml
+data/
+logs/
+workspace/
+
+# ---- 构建产物 ----
+dist/
+build/
+*.spec
+# PyInstaller 生成的 spec 若需入库请删除本行
+
+# ---- 环境 / 依赖 ----
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# ---- 工具目录 ----
+.mimocode/
+.idea/
+.vscode/
+
+# ---- 系统杂项 ----
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.log

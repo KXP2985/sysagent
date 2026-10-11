@@ -1,0 +1,87 @@
+# SysAgent 配置模板 —— 复制为 config.yaml 后修改
+
+llm:
+  # provider 可选: ollama (本地，默认) | openai_compatible
+  provider: ollama
+
+  openai_compatible:
+    # 兼容 OpenAI /v1/chat/completions 的所有服务
+    # 例: OpenAI https://api.openai.com/v1
+    #     DeepSeek https://api.deepseek.com/v1
+    #     通义 https://dashscope.aliyuncs.com/compatible-mode/v1
+    base_url: "https://api.openai.com/v1"
+    api_key: "${OPENAI_API_KEY}"   # 支持 ${ENV} 环境变量展开
+    model: "gpt-4o-mini"
+    temperature: 0.3
+    timeout: 60
+
+  ollama:
+    # 本地模型（默认）。先 ollama serve，并 ollama pull <model>
+    base_url: "http://127.0.0.1:11434"
+    model: "qwen2.5:7b"
+    timeout: 120
+
+server:
+  host: "127.0.0.1"
+  port: 8765
+
+# 记忆与能力进化的数据目录（memory.jsonl、config.runtime.yaml）
+data_dir: "./data"
+
+# 定时汇报：周期汇总监听结果与系统状态，推送到对话（QQ 启用时可转发到 report_group_id）
+report:
+  enabled: true
+  interval_minutes: 30
+  llm_summary: false          # true 则附加 LLM 观察（按次计费）
+
+# QQ 机器人（OneBot v11 HTTP：NapCat / Lagrange / go-cqhttp 等）
+qq:
+  enabled: false
+  api_base: "http://127.0.0.1:3000"   # OneBot HTTP API 地址
+  access_token: ""                    # OneBot access_token
+  webhook_token: ""                   # 校验上报 URL 的 ?token=
+  allowed_user_ids: []                # 允许私聊的 QQ 号
+  allowed_group_ids: []               # 允许的群号
+  report_group_id: null               # 定时汇报转发到的群号
+
+# 代码学习（受限）：只读 scan_dirs 下的项目；脚手架只能写 workspace_dir 内
+code:
+  scan_dirs: []                       # 例: ["D:/code", "/home/me/projects"]
+  workspace_dir: "./workspace"
+
+agent:
+  max_tool_rounds: 15          # 单轮对话最多工具调用次数
+  history_limit: 40            # 保留的对话条数
+
+whitelist:
+  # Agent 只能执行这里列出的命令; needs_approval=true 的执行前需在 Web 端批准
+  commands:
+    - name: "查看监听端口"
+      command: "netstat -ano"
+      needs_approval: false
+    - name: "查看磁盘空间"
+      command: "df -h"
+      needs_approval: false
+  # 允许 Agent 读取的日志/文件目录（含子目录）
+  read_dirs:
+    - "D:/app/logs"
+
+monitor:
+  poll_interval: 0.5           # 日志轮询间隔（秒）
+  max_lines_per_push: 200      # 单次推送最大行数
+  projects:
+    - name: "demo"
+      description: "示例项目（改成你的项目）"
+      log_files:
+        - "./logs/demo.log"
+      error_patterns:
+        - '\bERROR\b'
+        - 'Traceback \(most recent call last\)'
+        - '\bFATAL\b'
+        - 'Exception'
+      warn_patterns:
+        - '\bWARN(ING)?\b'
+        - 'deprecated'
+      # 可选: 供 Agent 使用的启停命令（执行时需审批）
+      start_command: ""
+      workdir: ""

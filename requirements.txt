@@ -1,0 +1,6 @@
+fastapi>=0.110
+uvicorn>=0.29
+websockets>=12.0
+psutil>=5.9
+httpx>=0.27
+PyYAML>=6.0
